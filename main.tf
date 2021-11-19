@@ -2,89 +2,65 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.27"
+      version = ">= 3.63"
     }
   }
 
-  required_version = ">= 0.14.9"
+  required_version = ">= 0.13.1"
+
+  backend "s3" {
+    bucket = "tfstate-mskalmykov-aike2ier"
+    key    = "tf-course-homework"
+    region = "eu-central-1"
+  }
+
 }
 
 provider "aws" {
   profile = "default"
-  region  = "eu-central-1"
+  region  = local.region
   default_tags {
     tags = {
       Name = "tf-course-homework"
     }
   }
+}
+
+locals {
+  region = "eu-central-1"
+}
+
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "tf-course-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs            = ["${local.region}a", "${local.region}b"]
+  public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
 
 }
 
-resource "aws_vpc" "my_vpc" {
-  cidr_block = "10.0.0.0/16"
+module "sg_web_ssh" {
+  source = "terraform-aws-modules/security-group/aws"
+  name   = "sg_web_ssh"
+  vpc_id = module.vpc.vpc_id
+
+  ingress_cidr_blocks = ["0.0.0.0/0"]
+
+  ingress_rules = ["http-80-tcp", "ssh-tcp"]
+  egress_rules  = ["all-all"]
 }
 
-resource "aws_subnet" "my_subnet" {
-  vpc_id            = aws_vpc.my_vpc.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "eu-central-1a"
-}
+module "app_server" {
+  source = "terraform-aws-modules/ec2-instance/aws"
 
-resource "aws_internet_gateway" "my_gw" {
-  vpc_id = aws_vpc.my_vpc.id
-}
-
-resource "aws_route_table" "my_rt" {
-  vpc_id = aws_vpc.my_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.my_gw.id
-  }
-}
-
-resource "aws_route_table_association" "rt_subnet" {
-  subnet_id      = aws_subnet.my_subnet.id
-  route_table_id = aws_route_table.my_rt.id
-}
-
-resource "aws_security_group" "sg_web_server" {
-  name   = "sg_web_server"
-  vpc_id = aws_vpc.my_vpc.id
-
-  ingress {
-    description = "WEB"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-}
-
-resource "aws_instance" "app_server" {
-  ami                         = "ami-0245697ee3e07e755"
+  name                        = "tf-course-ec2"
+  ami                         = "ami-0a49b025fffbbdac6"
   instance_type               = "t2.micro"
   key_name                    = "mskawslearn1-pair1"
-  subnet_id                   = aws_subnet.my_subnet.id
-  vpc_security_group_ids      = [aws_security_group.sg_web_server.id]
-  associate_public_ip_address = true
+  associate_public_ip_address = "true"
+  subnet_id                   = module.vpc.public_subnets[0]
+  vpc_security_group_ids      = [module.sg_web_ssh.security_group_id]
 
-  depends_on = [aws_internet_gateway.my_gw]
 }
-
