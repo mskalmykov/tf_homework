@@ -52,7 +52,7 @@ module "eks" {
     {
       instance_type        = "t2.small"
       key_name             = "mskawslearn1-pair1"
-      asg_desired_capacity = 1
+      asg_desired_capacity = 2
       asg_max_size         = 3
     }
   ]
@@ -72,6 +72,13 @@ provider "kubernetes" {
   token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
+resource "aws_ecr_repository" "my-ecr" {
+  name                 = "my-ecr"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
 
 #module "sg_web_ssh" {
 #  source = "terraform-aws-modules/security-group/aws"
