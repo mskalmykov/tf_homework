@@ -73,11 +73,38 @@ provider "kubernetes" {
 }
 
 resource "aws_ecr_repository" "my-ecr" {
-  name                 = "my-ecr"
+  name = "my-ecr"
 
   image_scanning_configuration {
     scan_on_push = true
   }
+}
+
+module "db" {
+  source  = "terraform-aws-modules/rds/aws"
+  version = "~> 3.0"
+
+  identifier = "my-db"
+
+  engine            = "mariadb"
+  engine_version    = "10.5.12"
+  instance_class    = "db.t2.micro"
+  allocated_storage = 20
+
+  name     = "nhltop"
+  username = "nhltop"
+  password = "$(var.DB_PASSWORD)"
+  port     = "3306"
+
+  skip_final_snapshot = true
+
+  #vpc_security_group_ids = ["sg-12345678"]
+
+  # DB subnet group
+  subnet_ids           = module.vpc.public_subnets
+  family = "mariadb10.5"
+  major_engine_version = "10.5"
+
 }
 
 #module "sg_web_ssh" {
