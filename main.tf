@@ -48,14 +48,22 @@ module "eks" {
   vpc_id           = module.vpc.vpc_id
   subnets          = module.vpc.public_subnets
   write_kubeconfig = false
-  worker_groups = [
-    {
-      instance_type        = "t2.small"
-      key_name             = "mskawslearn1-pair1"
-      asg_desired_capacity = 1
-      asg_max_size         = 3
+  #  worker_groups = [
+  #    {
+  #      instance_type        = "t2.small"
+  #      key_name             = "mskawslearn1-pair1"
+  #      asg_desired_capacity = 1
+  #      asg_max_size         = 3
+  #    }
+  #  ]
+  node_groups = {
+    workers = {
+      instance_types   = ["t2.small"]
+      key_name         = "mskawslearn1-pair1"
+      desired_capacity = 1
+      max_capacity     = 3
     }
-  ]
+  }
 }
 
 data "aws_eks_cluster" "cluster" {
@@ -89,8 +97,10 @@ module "db" {
 
   name     = "nhltop"
   username = "nhltop"
-  password = var.DB_PASSWORD
   port     = "3306"
+  # You should run "export TF_VAR_DB_PASSWORD=xxxxxxx" command
+  # prior to "terraform apply" to define this value
+  password = var.DB_PASSWORD
 
   skip_final_snapshot = true
 
@@ -98,22 +108,22 @@ module "db" {
 
   # DB subnet group
   subnet_ids           = module.vpc.public_subnets
-  family = "mariadb10.5"
+  family               = "mariadb10.5"
   major_engine_version = "10.5"
 
 }
 
 resource "aws_security_group" "sg_rds" {
   name        = "RDS security group"
-  description = "Allow tcp/3306 from EKS"
+  description = "Allow tcp/3306 from EKS subnets"
   vpc_id      = module.vpc.vpc_id
 
   ingress {
-    description      = "MySQL from VPC"
-    from_port        = 3306
-    to_port          = 3306
-    protocol         = "tcp"
-    cidr_blocks      = module.vpc.public_subnets_cidr_blocks
+    description = "MySQL from EKS subnets"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = module.vpc.public_subnets_cidr_blocks
   }
 
   egress {
