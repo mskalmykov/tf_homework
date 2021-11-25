@@ -8,3 +8,12 @@ output "cluster_endpoint" {
   value       = module.eks.cluster_endpoint
 }
 
+output "ecr_url" {
+  description = "ECR repository URL"
+  value       = aws_ecr_repository.nhltop.repository_url
+}
+
+output "rds_address" {
+  description = "RDS address"
+  value       = module.db.db_instance_address
+}
