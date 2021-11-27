@@ -3,3 +3,7 @@ variable "DB_PASSWORD" {
   type        = string
 }
 
+variable "AWS_REGION" {
+  description = "AWS region where to create infrastructure"
+  type        = string
+}

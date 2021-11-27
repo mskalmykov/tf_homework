@@ -18,16 +18,12 @@ terraform {
 
 provider "aws" {
   profile = "default"
-  region  = local.region
+  region  = var.AWS_REGION
   default_tags {
     tags = {
       Name = "tf-course-homework"
     }
   }
-}
-
-locals {
-  region = "eu-central-1"
 }
 
 module "vpc" {
@@ -36,7 +32,7 @@ module "vpc" {
   name = "tf-course-vpc"
   cidr = "10.0.0.0/16"
 
-  azs            = ["${local.region}a", "${local.region}b"]
+  azs            = ["${var.AWS_REGION}a", "${var.AWS_REGION}b"]
   public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
 
 }
@@ -48,22 +44,14 @@ module "eks" {
   vpc_id           = module.vpc.vpc_id
   subnets          = module.vpc.public_subnets
   write_kubeconfig = false
-  #  worker_groups = [
-  #    {
-  #      instance_type        = "t2.small"
-  #      key_name             = "mskawslearn1-pair1"
-  #      asg_desired_capacity = 1
-  #      asg_max_size         = 3
-  #    }
-  #  ]
-  node_groups = {
-    workers = {
-      instance_types   = ["t2.small"]
-      key_name         = "mskawslearn1-pair1"
-      desired_capacity = 1
-      max_capacity     = 3
-    }
-  }
+    worker_groups = [
+      {
+        instance_type        = "t2.small"
+        key_name             = "mskawslearn1-pair1"
+        asg_desired_capacity = 1
+        asg_max_size         = 3
+      }
+    ]
 }
 
 data "aws_eks_cluster" "cluster" {
